@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 400">
+    <!-- Symbol scaled and shifted left -->
+    <g transform="translate(50, 50) scale(0.58)">
+        <rect width="512" height="512" rx="112" fill="#09090B"/>
+        <path d="M 64 256 L 448 256" stroke="#3B82F6" stroke-width="48" stroke-linecap="round"/>
+        <path d="M 160 384 V 128 L 352 384 V 128" stroke="#FAFAFA" stroke-width="48" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    </g>
+    <!-- Text -->
+    <text x="420" y="245" font-family="Segoe UI, -apple-system, sans-serif" font-weight="bold" font-size="160" fill="#FAFAFA">NetBaseline</text>
+</svg>

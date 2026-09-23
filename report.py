@@ -1,65 +1,55 @@
 import os
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.pagesizes import landscape, letter
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
 from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib import colors
 
 def build_pdf_report(audit_data, filename="Audit_Report.pdf"):
-    """Takes a dictionary of audit findings and generates a 1-page PDF at the specified filepath."""
-    
-    doc = SimpleDocTemplate(filename, pagesize=letter)
+    doc = SimpleDocTemplate(filename, pagesize=landscape(letter))
     styles = getSampleStyleSheet()
     story = []
-
-    # Title
-    story.append(Paragraph("<b>SMB Network Security Assessment</b>", styles['Title']))
+    
+    story.append(Paragraph("<b>NetBaseline Security Assessment</b>", styles['Title']))
     story.append(Spacer(1, 12))
 
-    # Executive Summary
-    story.append(Paragraph("<b>Executive Summary</b>", styles['Heading2']))
-    summary_text = f"The audit successfully swept the local subnet and identified <b>{audit_data['total_devices']}</b> active devices."
-    story.append(Paragraph(summary_text, styles['Normal']))
-    story.append(Spacer(1, 12))
+    # General Liability Protection
+    story.append(Paragraph("<b>Assessment Limitations & Scope</b>", styles['Heading3']))
+    limitations = "<i>This assessment utilizes an extended protocol sweep to identify administrative, infrastructure, and IoT services. It performs non-destructive identification, active protocol enumeration, and banner grabbing to identify software versions and potential configuration flaws. It does not perform destructive exploitation, endpoint malware analysis, or password brute-forcing.</i>"
+    story.append(Paragraph(limitations, styles['Normal']))
+    story.append(Spacer(1, 20))
 
-   # 1. Gateway Status
-    story.append(Paragraph("<b>1. Perimeter & Gateway Security</b>", styles['Heading2']))
+    story.append(Paragraph("<b>Perimeter & Gateway Assessment</b>", styles['Heading2']))
     if audit_data['gateway_compromised']:
-        details = audit_data['gateway_details'].replace("[CRITICAL] ", "")
-        gw_text = f"<font color='red'><b>[FAILED]</b></font> The main router is vulnerable to default administrator credentials.<br/><b>Exposure:</b> {details}<br/><i>This allows attackers to reroute traffic or completely disable the firewall.</i>"
+        details = audit_data['gateway_details'].replace("[POTENTIAL EXPOSURE] ", "")
+        gw_text = f"<font color='red'><b>Potential Exposure Identified:</b></font> {details}"
     else:
-        gw_text = "<font color='green'><b>[PASSED]</b></font> The main router gateway resisted basic default credential attacks."
+        gw_text = "<font color='green'><b>No Findings:</b></font> Gateway did not accept common default credentials."
     story.append(Paragraph(gw_text, styles['Normal']))
-    story.append(Spacer(1, 12))
+    story.append(Spacer(1, 20))
 
-    # 2. Internal Device Findings
-    story.append(Paragraph("<b>2. Internal Device Vulnerabilities</b>", styles['Heading2']))
-    if not audit_data['vulnerable_devices']:
-        story.append(Paragraph("<font color='green'><b>[PASSED]</b></font> No critical exposed services (RDP, SMB, FTP, Telnet) were detected on internal devices.", styles['Normal']))
-    else:
-        for dev in audit_data['vulnerable_devices']:
-            dev_text = f"<b>Target IP:</b> {dev['ip']} ({dev['vendor']})"
-            story.append(Paragraph(dev_text, styles['Normal']))
-            
-            for finding in dev['findings']:
-                story.append(Paragraph(f"<font color='red'><b>- {finding}</b></font>", styles['Normal']))
-            story.append(Spacer(1, 6))
+    story.append(Paragraph(f"<b>Asset Exposure Inventory (Total Devices: {audit_data['total_devices']})</b>", styles['Heading2']))
+    story.append(Spacer(1, 10))
 
-    # 3. Recommended Actions (Now Dynamic)
-    story.append(Spacer(1, 12))
-    story.append(Paragraph("<b>Recommended Action Plan</b>", styles['Heading2']))
+    table_data = [["Asset IP", "Identification", "Network Exposure", "Assessment Finding"]]
+    sorted_inventory = sorted(audit_data['inventory'], key=lambda x: [int(part) for part in x['ip'].split('.')])
     
-    step_num = 1
-    
-    if audit_data['gateway_compromised']:
-        story.append(Paragraph(f"{step_num}. Update router administrator passwords immediately to prevent unauthorized access.", styles['Normal']))
-        step_num += 1
-        
-    if audit_data['vulnerable_devices']:
-        story.append(Paragraph(f"{step_num}. Disable File Sharing (SMB) or open ports on internal devices that do not explicitly require it for business operations.", styles['Normal']))
-        step_num += 1
-        
-    # Always include segmentation as a baseline best practice
-    story.append(Paragraph(f"{step_num}. Ensure Guest Wi-Fi is physically or logically segmented from the main business network.", styles['Normal']))
+    for dev in sorted_inventory:
+        table_data.append([dev['ip'], dev['classification'], dev['exposure'], dev['finding']])
 
-    # Generate the file
+    t = Table(table_data, colWidths=[100, 250, 200, 180])
+    t.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#273f7a")),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 12),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor("#f4f4f4")),
+        ('GRID', (0, 0), (-1, -1), 1, colors.black),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('FONTSIZE', (0, 1), (-1, -1), 10),
+    ]))
+    
+    story.append(t)
     doc.build(story)
     return filename
