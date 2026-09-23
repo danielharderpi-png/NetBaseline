@@ -1,0 +1,6 @@
+scapy
+customtkinter
+reportlab
+mac-vendor-lookup
+pysmb
+requests
